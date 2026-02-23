@@ -3,9 +3,10 @@ local State = require("worktree.state")
 --- @class _Worktree
 local _Worktree = {}
 
+local state = State.get()
+
 function _Worktree.setup(_)
   if not Git.is_inside_worktree() then
-    local state = State.get()
     if not state.path then
       state.path = Git.absolute_git_dir()
       vim.notify(state.path)
@@ -52,6 +53,28 @@ function _Worktree.setup(_)
       end
     })
   end
+end
+
+function _Worktree.snacks()
+  -- Transform strings into {text = string} format
+  local items = vim.tbl_map(function(s)
+    return { text = s }
+  end, Git.get_worktrees(state.worktree))
+
+  Snacks.picker({
+    items = items,
+    layout = {
+      preset = "vscode"
+    },
+    format = "text",
+    confirm = function(picker, item)
+      picker:close()
+      state.worktree = item.text
+      Git.switch_worktree(state.path, item.text)
+      vim.cmd("e .")
+      State.set(state)
+    end,
+  })
 end
 
 return _Worktree
